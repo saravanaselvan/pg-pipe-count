@@ -12,7 +12,7 @@ const Dashboard = () => {
     padding: "0.5rem 1rem",
     borderRadius: "4px",
   };
-  const activeStyle = { ...normalStyle, background: "#3182ce" };
+  const activeStyle = { ...normalStyle, background: "#fff", color: "#000" };
   const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
@@ -23,7 +23,7 @@ const Dashboard = () => {
   return (
     <Box sx={{ width: "100%" }}>
       <header>
-        <Box bg="#082237">
+        <Box bg="#146bb3">
           <HStack
             sx={{
               color: "#fff",

@@ -12,7 +12,7 @@ import ProcessPicture from "./Components/ProcessPicture";
 
 function App() {
   return (
-    <Box className="App" bg="blue.200">
+    <Box className="App" bg="blue.500">
       <Routes>
         <Route path="/" element={<Dashboard />}>
           <Route index element={<ProcessPicture />} />
