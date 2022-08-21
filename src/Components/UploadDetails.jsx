@@ -4,183 +4,115 @@ import { Box, Heading, HStack, Text, VStack } from "@chakra-ui/layout";
 import { Select } from "@chakra-ui/select";
 import { useToast } from "@chakra-ui/toast";
 import axios from "axios";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Link } from "react-router-dom";
 
 const UploadDetails = () => {
-  const [videoObject, setVideoObject] = useState();
+  const [imageURL, setImageURL] = useState(null);
+  const [hideImg, setHideImg] = useState(false);
   const [videoConversion, setVideoConversion] = useState();
   const navigate = useNavigate();
   const toast = useToast();
+  const canvasRef = useRef();
+  const imgRef = useRef();
 
   const { id } = useParams();
 
+  const getMarkerColor = (score) => {
+    if (score < 50) {
+      return "rgba(255, 51, 0, 0.5)";
+    } else if (score > 50 && score < 80) {
+      return "#ffaa00";
+    } else {
+      return "rgba(67, 230, 148, 0.5)";
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score < 50) {
+      return "rgb(255, 51, 0)";
+    } else if (score > 50 && score < 80) {
+      return "#ffaa00";
+    } else {
+      return "rgb(67, 230, 148)";
+    }
+  };
+  const drawImgOnCanvas = (predictions) => {
+    const { pred_boxes, scores, image_height, image_width, pred_classes } =
+      predictions;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const img = imgRef.current;
+    canvas.width = image_width;
+    canvas.height = image_height;
+    ctx.drawImage(img, 0, 0, image_width, image_height);
+
+    pred_boxes.forEach((box, index) => {
+      ctx.beginPath();
+      const score = Math.round(scores[index] * 100);
+      const predClass = pred_classes[index];
+      const color = getMarkerColor(score);
+      ctx.lineWidth = "6";
+      ctx.strokeStyle = color;
+      console.log(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+      ctx.rect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillRect(box[0], box[1], 65, 30);
+      ctx.fillStyle = getScoreColor(score);
+      ctx.fillText(`${predClass} ${score} %`, box[0] + 5, box[1] + 20);
+      ctx.stroke();
+    });
+  };
   useEffect(() => {
     const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
-    const fetchReport = async () => {
-      const response = await axios.get(`/api/download_video/${id}`, {
+    const fetchPredictions = async () => {
+      const {
+        data: { predictions },
+      } = await axios.get(`/api/download_predictions/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const { pred_boxes, scores } = predictions;
+      drawImgOnCanvas(predictions);
+      setHideImg(true);
+    };
+
+    fetchPredictions();
+  }, [imageURL]);
+
+  useEffect(() => {
+    const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
+    const fetchPipe = async () => {
+      const response = await axios.get(`/api/pipe/${id}`, {
         responseType: "blob",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
       });
-
       const blob = new Blob([response.data], {
         type: response.headers["content-type"],
       });
-      setVideoObject(URL.createObjectURL(blob));
+      setImageURL(URL.createObjectURL(blob));
     };
-
-    fetchReport();
+    fetchPipe();
   }, []);
 
-  useEffect(() => {
-    const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
-    const fetchVideoConversion = async () => {
-      const {
-        data: { video_conversion },
-      } = await axios.get(`/api/video_conversions/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      setVideoConversion(video_conversion);
-    };
-    fetchVideoConversion();
-  }, []);
-
-  const downloadFile = (data, fileName, contentType) => {
-    const blob = new Blob([data], { type: contentType });
-    const a = document.createElement("a");
-    a.download = fileName;
-    a.href = window.URL.createObjectURL(blob);
-    const clickEvt = new MouseEvent("click", {
-      view: window,
-      bubbles: true,
-      cancelable: true,
-    });
-    a.dispatchEvent(clickEvt);
-    a.remove();
-  };
-
-  const viewReport = async (id, type, fileName) => {
-    const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
-    const response = await axios.get(
-      `/api/download_report/${id}?type=${type}`,
-      {
-        responseType: "blob",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    );
-    downloadFile(
-      response.data,
-      `${fileName}`,
-      response.headers["content-type"],
-    );
-  };
   return (
     <Box bg="#fff" h="100vh">
       <Box maxW="1400px" m="auto" p="4rem 5%">
         <HStack alignItems="flex-start" gap="6">
           <VStack>
-            <video width="700" controls>
-              {videoObject && <source src={videoObject} />}
-            </video>
-          </VStack>
-          <VStack alignItems="flex-start" gap="4" w="30%">
-            <Heading as="h3" fontSize="2xl" mb="4">
-              Parameters
-            </Heading>
-            <code>
-              <Text color="brown" display="inline">
-                input_file_name:
-              </Text>{" "}
-              <Text color="blue" display="inline">
-                {videoConversion?.original_uploaded_file_name}
-              </Text>{" "}
-              <br />
-              <Text color="brown" display="inline">
-                params:
-              </Text>{" "}
-              <br />
-              &nbsp;&nbsp;
-              <Text color="brown" display="inline">
-                frame_rate:{" "}
-              </Text>
-              <Text color="green" display="inline">
-                {videoConversion?.param_frame_rate}
-              </Text>{" "}
-              <br />
-              &nbsp;&nbsp;
-              <Text color="brown" display="inline">
-                output_format:
-              </Text>{" "}
-              <Text color="blue" display="inline">
-                {videoConversion?.param_output_format.toUpperCase()}
-              </Text>
-              <br />
-              &nbsp;&nbsp;
-              <Text color="brown" display="inline">
-                quality:
-              </Text>{" "}
-              <Text color="blue" display="inline">
-                {videoConversion?.param_quality}
-              </Text>
-              <br />
-              &nbsp;&nbsp;
-              <Text color="brown" display="inline">
-                exif_info_captured:
-              </Text>{" "}
-              <Text color="blue" display="inline">
-                {videoConversion?.param_is_exif_info_captured ? "Yes" : "No"}
-              </Text>{" "}
-            </code>
-            <Heading as="h3" fontSize="2xl" mb="4">
-              Download
-            </Heading>
-            {videoConversion?.status === "COMPLETED" && (
-              <HStack>
-                <Button
-                  colorScheme="blue"
-                  onClick={() =>
-                    viewReport(
-                      videoConversion.id,
-                      "pdf",
-                      videoConversion.output_pdf_file_name,
-                    )
-                  }
-                >
-                  Report PDF
-                </Button>
-                <Button
-                  colorScheme="blue"
-                  onClick={() =>
-                    viewReport(
-                      videoConversion.id,
-                      "yaml",
-                      videoConversion.output_yaml_file_name,
-                    )
-                  }
-                >
-                  Params YAML
-                </Button>
-                {videoConversion.param_is_exif_info_captured && (
-                  <Button
-                    colorScheme="blue"
-                    onClick={() =>
-                      viewReport(videoConversion.id, "json", "exif.json")
-                    }
-                  >
-                    Exif JSON
-                  </Button>
-                )}
-              </HStack>
+            {imageURL && (
+              <Box maxW="1400px" w="1100px" overflow="auto">
+                {imageURL && <canvas ref={canvasRef} position="absolute" />}
+                <img ref={imgRef} src={imageURL} style={{ display: "none" }} />
+              </Box>
             )}
           </VStack>
         </HStack>

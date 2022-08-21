@@ -8,13 +8,14 @@ import ProcessVideo from "./Components/ProcessVideo";
 import Register from "./Components/Register";
 import Uploads from "./Components/Uploads";
 import UploadDetails from "./Components/UploadDetails";
+import ProcessPicture from "./Components/ProcessPicture";
 
 function App() {
   return (
     <Box className="App" bg="blue.200">
       <Routes>
         <Route path="/" element={<Dashboard />}>
-          <Route index element={<ProcessVideo />} />
+          <Route index element={<ProcessPicture />} />
           <Route path="/uploads" element={<Uploads />} />
           <Route path="/upload-details/:id" element={<UploadDetails />} />
         </Route>

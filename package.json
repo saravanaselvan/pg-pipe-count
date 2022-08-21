@@ -2,7 +2,7 @@
   "name": "pg-pipe-count",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://5000-saravanasel-pgvideoconv-6d420syeph9.ws-us62.gitpod.io/",
+  "proxy": "https://5000-saravanasel-pgpipecount-letku7042yx.ws-us62.gitpod.io/",
   "dependencies": {
     "@chakra-ui/icons": "^1.1.7",
     "@chakra-ui/react": "^1.8.6",
