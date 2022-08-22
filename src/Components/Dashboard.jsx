@@ -1,10 +1,10 @@
 import { Avatar } from "@chakra-ui/avatar";
 import { Image } from "@chakra-ui/image";
-import { Box, Container, HStack, Link, Stack } from "@chakra-ui/layout";
-import { Outlet, useNavigate } from "react-router";
+import { Box, HStack } from "@chakra-ui/layout";
+import { Outlet } from "react-router";
 import { Link as RouterLink, NavLink } from "react-router-dom";
-import Login from "./Login";
 import pgLogo from "../photoGauge_logo.png";
+import Login from "./Login";
 
 const Dashboard = () => {
   const normalStyle = {
@@ -13,7 +13,6 @@ const Dashboard = () => {
     borderRadius: "4px",
   };
   const activeStyle = { ...normalStyle, background: "#fff", color: "#000" };
-  const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
   if (!userInfo) {

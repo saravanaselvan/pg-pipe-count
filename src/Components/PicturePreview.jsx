@@ -1,26 +1,14 @@
-import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
-} from "@chakra-ui/alert";
 import { Button } from "@chakra-ui/button";
-import { Checkbox } from "@chakra-ui/checkbox";
-import { Heading, HStack, Text, VStack } from "@chakra-ui/layout";
-import { Select } from "@chakra-ui/select";
+import { HStack, VStack } from "@chakra-ui/layout";
 import { useToast } from "@chakra-ui/toast";
 import axios from "axios";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
 const PicturePreview = ({ file, pictureURL, removePicture }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadCompleted, setUploadCompleted] = useState(false);
-  const [width, setWidth] = useState(100);
-  const [height, setHeight] = useState(100);
   const navigate = useNavigate();
   const toast = useToast();
-  const canvasRef = useRef();
   const imgRef = useRef();
 
   const showServerError = useCallback(
@@ -43,14 +31,13 @@ const PicturePreview = ({ file, pictureURL, removePicture }) => {
 
       const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
       setIsUploading(true);
-      const { data } = await axios.post("/api/pipe_count", formData, {
+      await axios.post("/api/pipe_count", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${accessToken}`,
         },
       });
       setIsUploading(false);
-      setUploadCompleted(true);
       toast({
         description: `Upload successful.`,
         status: "success",
@@ -73,11 +60,11 @@ const PicturePreview = ({ file, pictureURL, removePicture }) => {
   };
 
   return (
-    <VStack alignItems="flex-start" gap="6">
+    <VStack alignItems="center" gap="6">
       <VStack>
-        <img ref={imgRef} src={pictureURL} />
+        <img ref={imgRef} src={pictureURL} alt="Pipe" />
       </VStack>
-      <VStack alignItems="flex-start" gap="4" w="30%">
+      <VStack alignItems="center" justifyContent="center" gap="4">
         <HStack w="100%" p="0 3rem">
           {/* {!uploadCompleted && ( */}
           <Button
@@ -86,6 +73,7 @@ const PicturePreview = ({ file, pictureURL, removePicture }) => {
             flex="1"
             onClick={handleSubmit}
             isLoading={isUploading}
+            loadingText="Uploading..."
           >
             Upload
           </Button>

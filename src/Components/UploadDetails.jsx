@@ -1,19 +1,14 @@
-import { Button } from "@chakra-ui/button";
-import { Checkbox } from "@chakra-ui/checkbox";
-import { Box, Heading, HStack, Text, VStack } from "@chakra-ui/layout";
-import { Select } from "@chakra-ui/select";
-import { useToast } from "@chakra-ui/toast";
+import { Heading } from "@chakra-ui/layout";
+import { Box, HStack, VStack } from "@chakra-ui/layout";
+import { Spinner } from "@chakra-ui/spinner";
 import axios from "axios";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router";
 
 const UploadDetails = () => {
   const [imageURL, setImageURL] = useState(null);
-  const [hideImg, setHideImg] = useState(false);
-  const [videoConversion, setVideoConversion] = useState();
-  const navigate = useNavigate();
-  const toast = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [pipeCount, setPipeCount] = useState();
   const canvasRef = useRef();
   const imgRef = useRef();
 
@@ -38,36 +33,39 @@ const UploadDetails = () => {
       return "rgb(67, 230, 148)";
     }
   };
-  const drawImgOnCanvas = (predictions) => {
-    const { pred_boxes, scores, image_height, image_width, pred_classes } =
-      predictions;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const img = imgRef.current;
-    canvas.width = image_width;
-    canvas.height = image_height;
-    ctx.drawImage(img, 0, 0, image_width, image_height);
 
-    pred_boxes.forEach((box, index) => {
-      ctx.beginPath();
-      const score = Math.round(scores[index] * 100);
-      const predClass = pred_classes[index];
-      const color = getMarkerColor(score);
-      ctx.lineWidth = "6";
-      ctx.strokeStyle = color;
-      console.log(box[0], box[1], box[2] - box[0], box[3] - box[1]);
-      ctx.rect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "#000";
-      ctx.fillRect(box[0], box[1], 65, 30);
-      ctx.fillStyle = getScoreColor(score);
-      ctx.fillText(`${predClass} ${score} %`, box[0] + 5, box[1] + 20);
-      ctx.stroke();
-    });
-  };
   useEffect(() => {
     const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
+
+    const drawImgOnCanvas = (predictions) => {
+      const { pred_boxes, scores, image_height, image_width, pred_classes } =
+        predictions;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const img = imgRef.current;
+      canvas.width = image_width;
+      canvas.height = image_height;
+      ctx.drawImage(img, 0, 0, image_width, image_height);
+
+      pred_boxes.forEach((box, index) => {
+        ctx.beginPath();
+        const score = Math.round(scores[index] * 100);
+        const predClass = pred_classes[index];
+        const color = getMarkerColor(score);
+        ctx.lineWidth = "6";
+        ctx.strokeStyle = color;
+        ctx.rect(box[0], box[1], box[2] - box[0], box[3] - box[1]);
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#000";
+        ctx.fillRect(box[0], box[1], 65, 30);
+        ctx.fillStyle = getScoreColor(score);
+        ctx.fillText(`${predClass} ${score} %`, box[0] + 5, box[1] + 20);
+        ctx.stroke();
+      });
+      setIsLoading(false);
+    };
+
     const fetchPredictions = async () => {
       const {
         data: { predictions },
@@ -77,17 +75,18 @@ const UploadDetails = () => {
           Authorization: `Bearer ${accessToken}`,
         },
       });
-      const { pred_boxes, scores } = predictions;
+      setPipeCount(predictions.pred_boxes.length);
       drawImgOnCanvas(predictions);
-      setHideImg(true);
     };
 
     fetchPredictions();
-  }, [imageURL]);
+  }, [imageURL, id]);
 
   useEffect(() => {
     const { accessToken } = JSON.parse(localStorage.getItem("userInfo"));
+
     const fetchPipe = async () => {
+      setIsLoading(true);
       const response = await axios.get(`/api/pipe/${id}`, {
         responseType: "blob",
         headers: {
@@ -101,17 +100,46 @@ const UploadDetails = () => {
       setImageURL(URL.createObjectURL(blob));
     };
     fetchPipe();
-  }, []);
+  }, [id]);
 
   return (
     <Box bg="#fff" h="100vh">
       <Box maxW="1400px" m="auto" p="4rem 5%">
         <HStack alignItems="flex-start" gap="6">
           <VStack>
+            {isLoading && (
+              <Box
+                maxW="1400px"
+                w="1100px"
+                h="80vh"
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                bg="gray.100"
+              >
+                <Spinner
+                  thickness="4px"
+                  speed="0.65s"
+                  emptyColor="gray.200"
+                  color="blue.500"
+                  size="xl"
+                />
+              </Box>
+            )}
             {imageURL && (
               <Box maxW="1400px" w="1100px" overflow="auto">
+                {!isLoading && (
+                  <Heading as="h3" fontSize="xl" mb="4">
+                    Number of Pipes detected: {pipeCount}
+                  </Heading>
+                )}
                 {imageURL && <canvas ref={canvasRef} position="absolute" />}
-                <img ref={imgRef} src={imageURL} style={{ display: "none" }} />
+                <img
+                  ref={imgRef}
+                  alt="Pipe"
+                  src={imageURL}
+                  style={{ display: "none" }}
+                />
               </Box>
             )}
           </VStack>
